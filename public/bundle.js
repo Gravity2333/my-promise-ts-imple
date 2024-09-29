@@ -60,16 +60,16 @@ class MyPromise {
     _isMyPrimiseDecided() {
         return this.state !== EMyPromiseState.PENDING;
     }
-    /** 实现决策成功promise */
-    _resolvePromiseImpl(value) {
+    /** 用来决策成功promise实现 */
+    _resolvePromiseImpl = (value) => {
         this.value = value;
         this.state = EMyPromiseState.FULFILLED;
         this.onFulfilledCallbacks.forEach((onFulfilledCallback) => {
             onFulfilledCallback();
         });
-    }
-    /** 实现决失败promise */
-    _rejectPromiseImpl(reason) {
+    };
+    /** 用来拒绝promise实现 */
+    _rejectPromiseImpl = (reason) => {
         /** 设置失败reason和状态 */
         this.value = reason;
         this.state = EMyPromiseState.REJECTED;
@@ -77,11 +77,11 @@ class MyPromise {
         this.onRejectedCallbacks.forEach((onRejectedCallback) => {
             onRejectedCallback();
         });
-    }
+    };
     /** 用来决策成功promise */
     _resolvePromise(inputVal) {
-        /** promise状态只可以变化一次 */
         if (!this._isMyPrimiseDecided()) {
+            /** promise状态只可以变化一次 */
             /** duck检测 */
             if (MyPromise._duckTest(inputVal)) {
                 MyPromise.resolve(inputVal).then(this._resolvePromiseImpl, this._rejectPromiseImpl);
@@ -93,8 +93,8 @@ class MyPromise {
     }
     /** 用来拒绝promise */
     _rejectPromise(reason) {
-        /** promise状态只可以变化一次 */
         if (!this._isMyPrimiseDecided()) {
+            /** promise状态只可以变化一次 */
             this._rejectPromiseImpl(reason);
         }
     }

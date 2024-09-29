@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEMO Promise</title>
+    <style>
+        * {
+            margin: 0px;
+            padding: 0px;
+        }
+
+        html,
+        body {
+            height: 100%;
+        }
+
+        header {
+            height: 26px;
+            background-color: lightgray;
+        }
+
+        span {
+            cursor: pointer;
+        }
+
+        span:hover {
+            color: red;
+        }
+
+        h4 {
+            padding: 0px 10px;
+            color: white;
+            display: inline-block;
+            margin: 0px;
+        }
+
+        .content {
+            background-color: lightcyan;
+            height: calc(100% - 26px);
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h4 id="title">DEMO My promise</h4>
+    </header>
+    <script type="module">
+        import MyPromise from "../bundle.js";
+        new MyPromise((r, j) => {
+            setTimeout(() => {
+                r({
+                    then: (a, b) => {
+                        a(MyPromise.resolve(MyPromise.resolve({
+                            then: (a, b) => a({
+                                then: (a, b) => a(231231)
+                            })
+                        })))
+                    }
+                })
+            }, 2000);
+        }).then(v => console.log(v), e => console.log('err', e))
+
+        new MyPromise((r, j) => {
+            r({
+                then: (a, b) => { a(MyPromise.resolve(312312)) }
+            })
+        }).then(v => console.log(v), e => console.log('err', e))
+    </script>
+</body>
+
+</html>

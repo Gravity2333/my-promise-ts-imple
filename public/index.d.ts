@@ -51,9 +51,9 @@ declare class MyPromise implements IMyPromise {
     value: any;
     /** 用来判断promise是否已经决策 */
     private _isMyPrimiseDecided;
-    /** 实现决策成功promise */
+    /** 用来决策成功promise实现 */
     private _resolvePromiseImpl;
-    /** 实现决失败promise */
+    /** 用来拒绝promise实现 */
     private _rejectPromiseImpl;
     /** 用来决策成功promise */
     private _resolvePromise;

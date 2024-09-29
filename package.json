@@ -1,6 +1,6 @@
 {
   "name": "my-promise-ts-imple",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "description": "",
   "main": "public/bundle.js",
   "scripts": {

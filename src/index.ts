@@ -60,17 +60,17 @@ enum EMyPromiseState {
       return this.state !== EMyPromiseState.PENDING;
     }
   
-    /** 实现决策成功promise */
-    private _resolvePromiseImpl(value: any) {
+    /** 用来决策成功promise实现 */
+    private _resolvePromiseImpl = (value: any) => {
       this.value = value;
       this.state = EMyPromiseState.FULFILLED;
       this.onFulfilledCallbacks.forEach((onFulfilledCallback) => {
         onFulfilledCallback();
       });
-    }
+    };
   
-    /** 实现决失败promise */
-    private _rejectPromiseImpl(reason: any) {
+    /** 用来拒绝promise实现 */
+    private _rejectPromiseImpl = (reason: any) => {
       /** 设置失败reason和状态 */
       this.value = reason;
       this.state = EMyPromiseState.REJECTED;
@@ -78,12 +78,12 @@ enum EMyPromiseState {
       this.onRejectedCallbacks.forEach((onRejectedCallback) => {
         onRejectedCallback();
       });
-    }
+    };
   
     /** 用来决策成功promise */
     private _resolvePromise(inputVal?: any) {
-      /** promise状态只可以变化一次 */
       if (!this._isMyPrimiseDecided()) {
+        /** promise状态只可以变化一次 */
         /** duck检测 */
         if (MyPromise._duckTest(inputVal)) {
           MyPromise.resolve(inputVal).then(this._resolvePromiseImpl, this._rejectPromiseImpl);
@@ -95,8 +95,8 @@ enum EMyPromiseState {
   
     /** 用来拒绝promise */
     private _rejectPromise(reason?: any) {
-      /** promise状态只可以变化一次 */
       if (!this._isMyPrimiseDecided()) {
+        /** promise状态只可以变化一次 */
         this._rejectPromiseImpl(reason);
       }
     }
