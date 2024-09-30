@@ -47,6 +47,29 @@
     <header>
         <h4 id="title">DEMO My promise</h4>
     </header>
+    <div style="white-space: pre">
+        打开控制台看效果
+        import MyPromise from "../bundle.js";
+        new MyPromise((r, j) => {
+            setTimeout(() => {
+                r({
+                    then: (a, b) => {
+                        a(MyPromise.resolve(MyPromise.resolve({
+                            then: (a, b) => a({
+                                then: (a, b) => a(231231)
+                            })
+                        })))
+                    }
+                })
+            }, 2000);
+        }).then(v => console.log(v), e => console.log('err', e))
+
+        new MyPromise((r, j) => {
+            r({
+                then: (a, b) => { a(MyPromise.resolve(312312)) }
+            })
+        }).then(v => console.log(v), e => console.log('err', e))
+    </div>
     <script type="module">
         import MyPromise from "../bundle.js";
         new MyPromise((r, j) => {

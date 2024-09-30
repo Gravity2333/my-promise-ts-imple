@@ -1,7 +1,7 @@
 {
   "name": "my-promise-ts-imple",
-  "version": "1.0.0",
-  "description": "",
+  "version": "1.0.2",
+  "description": "一个基于ts实现的Promise",
   "main": "public/bundle.js",
   "scripts": {
     "build": "npx webpack"
