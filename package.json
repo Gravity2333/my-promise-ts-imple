@@ -1,6 +1,6 @@
 {
   "name": "my-promise-ts-imple",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "description": "一个基于ts实现的Promise",
   "main": "public/bundle.js",
   "scripts": {
