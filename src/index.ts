@@ -1,325 +1,282 @@
-/** 实现一个Promise */
-/** Promise状态枚举 */
-enum EMyPromiseState {
-    /** 未决策状态 */
-    'PENDING' = 'pending',
-    /** 成功状态 */
-    'FULFILLED' = 'fulfilled',
-    /** 拒绝状态 */
-    'REJECTED' = 'rejected',
+/** Promise状态
+ *  FulFilled 成功
+ *  Rejected 失败
+ *  Pending 未决策
+ */
+enum MyPromiseState {
+  FULFILLED = "fulfilled",
+  REJECTED = "rejected",
+  PENDING = "pending",
+}
+
+/** Promise值 */
+type Value = any;
+
+/** 成功回调 */
+type OnFulfilled = (value: Value) => any;
+
+/** 失败回调 */
+type OnRejected = (reason: any) => any;
+
+/** 执行器 */
+type Executor = (onFulfilled: OnFulfilled, onRejected: OnRejected) => void;
+
+/** 把任务推入微任务队列，如果没有queueMicrotask， 使用settimeout 兼容运行环境 */
+const pushToMicroTask =
+  typeof queueMicrotask === "function" ? queueMicrotask : setTimeout;
+
+type Thenable = {
+  then: (onFulfilled: OnFulfilled, onRejected: OnRejected) => any;
+};
+
+/** allsettled返回值 */
+type AllSettledReturns = {
+  status: MyPromiseState;
+  value: any;
+};
+
+/**
+ * 实现一个Promise对象
+ */
+export default class MyPromise {
+  // Promise状态
+  private state: MyPromiseState = MyPromiseState.PENDING;
+  // 成功回调list 在promise成功后调用
+  private onFulfilledTasks: VoidFunction[] = [];
+  // 失败回调list 在promise失败后调用
+  private onRejectedTasks: VoidFunction[] = [];
+  // 值
+  private value: Value;
+  // 构造函数
+  constructor(executor: Executor) {
+    try {
+      // 执行执行器，传入resolvePromise / rejectPromise
+      executor(this._resolvePromise.bind(this), this._rejectPromise.bind(this));
+    } catch (e) {
+      /** 这里需要用try ... catch包一下, 执行器执行的过程中，如果出现异常，直接reject掉promise */
+      this._rejectPromise(e);
+    }
   }
-  
-  /** 成功回调类型 */
-  type OnFulfilled = (value?: any) => any;
-  
-  /** 失败回调类型 */
-  type OnRejected = (reason?: any) => any;
-  
-  /** 执行器 */
-  type Executor = (resolve: OnFulfilled, reject: OnRejected) => void;
-  
-  /** MyPromise类型 */
-  interface IMyPromise {
-    /** 状态 */
-    state: EMyPromiseState;
-    /** 值 ｜ 错误原因 */
-    value: any;
-    /** then方法，满足thenable协议 */
-    then: (onfulfilled?: OnFulfilled, onRejected?: OnRejected) => IMyPromise;
-    /** catch方法 */
-    catch: (catchHandler: (err: any) => void) => void;
-    /** finally 方法 */
-    finally: (finallyHandler: () => void) => void;
-    /** ---- 静态方法 ---- */
-    /** 返回成功MyPromise */
-    readonly resolve?: (value: any) => IMyPromise;
-    /** 返回失败MyPromise */
-    readonly reject?: (value: any) => IMyPromise;
-    /** all方法 */
-    readonly all?: (myPromises: IMyPromise[]) => IMyPromise;
-    /** any方法 */
-    readonly any?: (myPromises: IMyPromise[]) => IMyPromise;
-    /** race方法 */
-    readonly race?: (myPromises: IMyPromise[]) => IMyPromise;
-    /** allSettled方法 */
-    readonly allSettled?: (myPromises: IMyPromise[]) => IMyPromise[];
+
+  /** 判断当前Promise是否被决策 */
+  private _isPromiseDecided() {
+    return this.state !== MyPromiseState.PENDING;
   }
-  
-  class MyPromise implements IMyPromise {
-    /** 成功回调缓存 */
-    private onFulfilledCallbacks: VoidFunction[] = [];
-    /** 失败回调缓存 */
-    private onRejectedCallbacks: VoidFunction[] = [];
-    /** 状态 */
-    public state: EMyPromiseState = EMyPromiseState.PENDING;
-    /** value */
-    public value: any;
-  
-    /** 用来判断promise是否已经决策 */
-    private _isMyPrimiseDecided() {
-      return this.state !== EMyPromiseState.PENDING;
-    }
-  
-    /** 用来决策成功promise实现 */
-    private _resolvePromiseImpl = (value: any) => {
-      this.value = value;
-      this.state = EMyPromiseState.FULFILLED;
-      this.onFulfilledCallbacks.forEach((onFulfilledCallback) => {
-        onFulfilledCallback();
-      });
-    };
-  
-    /** 用来拒绝promise实现 */
-    private _rejectPromiseImpl = (reason: any) => {
-      /** 设置失败reason和状态 */
-      this.value = reason;
-      this.state = EMyPromiseState.REJECTED;
-      /** 此时回调缓存可能有挂着的任务，执行*/
-      this.onRejectedCallbacks.forEach((onRejectedCallback) => {
-        onRejectedCallback();
-      });
-    };
-  
-    /** 用来决策成功promise */
-    private _resolvePromise(inputVal?: any) {
-      if (!this._isMyPrimiseDecided()) {
-        /** promise状态只可以变化一次 */
-        /** duck检测 */
-        if (MyPromise._duckTest(inputVal)) {
-          MyPromise.resolve(inputVal).then(this._resolvePromiseImpl, this._rejectPromiseImpl);
-        } else {
-          this._resolvePromiseImpl(inputVal);
-        }
-      }
-    }
-  
-    /** 用来拒绝promise */
-    private _rejectPromise(reason?: any) {
-      if (!this._isMyPrimiseDecided()) {
-        /** promise状态只可以变化一次 */
-        this._rejectPromiseImpl(reason);
-      }
-    }
-  
-    /** ctor 穿入执行器函数 */
-    public constructor(executor: Executor) {
-      try {
-        /** 为了实现执行器内抛出异常自动拒绝 */
-        executor(this._resolvePromise.bind(this), this._rejectPromise.bind(this));
-      } catch (reason) {
-        this._rejectPromise(reason);
-      }
-    }
-  
-    /** then方法 */
-    public then(
-      onfulfilled: OnFulfilled = (value) => value, // 设置默认
-      onRejected: OnRejected = (reason) => {
-        //设置默认，这里为了可以把错误传递下去
-        throw reason;
-      },
-    ) {
-      return new MyPromise((resolve, reject) => {
-        const thenTask = (state: EMyPromiseState = EMyPromiseState.FULFILLED) => {
-          queueMicrotask(
-            function () {
-              try {
-                /** 获得 onfulfilled / onRejected 返回的原始值  */
-                const thenOriginResult =
-                  state === EMyPromiseState.FULFILLED
-                    ? //@ts-ignore
-                      onfulfilled(this.value)
-                    : //@ts-ignore
-                      onRejected(this.value);
-                //@ts-ignore
-                if ((this as unknown as IMyPromise) === thenOriginResult) {
-                  throw new Error('then方法不能返回当前MyPromise对象！');
-                }
-  
-                /** duck检测 */
-                if (MyPromise._duckTest(thenOriginResult)) {
-                  MyPromise._handleThenable(thenOriginResult, resolve, reject);
-                } else {
-                  /** 都不是 按照普通类型处理 */
-                  resolve(thenOriginResult);
-                }
-              } catch (err) {
-                reject(err);
-              }
-            }.bind(this),
-          );
-        };
-        if (this._isMyPrimiseDecided()) {
-          /** 当promise已经决策, 直接运行onfulfilled/onRejected */
-          thenTask(this.state);
-        } else {
-          /** 未决策，加入对应队列 两个都加入*/
-          this.onFulfilledCallbacks.push(thenTask.bind(this, EMyPromiseState.FULFILLED));
-          this.onRejectedCallbacks.push(thenTask.bind(this, EMyPromiseState.REJECTED));
-        }
-      });
-    }
-  
-    /** 最后处理错误 */
-    public catch(catchHandler: (err: any) => void = () => {}) {
-      /** 相当于仅调用失败的promise */
-      return this.then(
-        (val) => val,
-        (err) => {
-          catchHandler(err);
-        },
-      );
-    }
-  
-    /** 最终处理 */
-    public finally(finallyHandler: () => any = () => {}) {
-      this.then(
-        () => {
-          finallyHandler();
-        },
-        () => {
-          finallyHandler();
-        },
-      );
-    }
-  
-    /** 鸭子检测：
-     *  thenable协议： 对象/函数上包含then函数即可
-     */
-    private static _duckTest(thenable: any) {
-      return (
-        thenable &&
-        (typeof thenable === 'function' || typeof thenable === 'object') &&
-        typeof thenable.then === 'function'
-      );
-    }
-  
-    /** 递归处理thenable */
-    private static _handleThenable(thenableObj: any, resolve: OnFulfilled, reject: OnRejected) {
-      if (thenableObj instanceof MyPromise) {
-        return thenableObj.then(resolve, reject);
-      } else if (typeof thenableObj.then === 'function') {
-        return thenableObj.then(
-          (val: any) => {
-            MyPromise._handleThenable(val, resolve, reject);
-          },
-          (reason: any) => {
-            reject(reason);
-          },
+
+  /** 用来resolve当前Promise */
+  private _resolvePromise(value: Value) {
+    /** 只有在Promise没有决策的情况下才能调用 */
+    if (!this._isPromiseDecided()) {
+      if (MyPromise._isThenable(value)) {
+        MyPromise.resolve(value).then(
+          this._resolvePromise.bind(this),
+          this._rejectPromise.bind(this)
         );
       } else {
-        return resolve(thenableObj);
+        // 修改状态
+        this.state = MyPromiseState.FULFILLED;
+        // 设置值
+        this.value = value;
+        // 检查 onFulfilledTasks 是否有注册的then任务，如果有就执行
+        this.onFulfilledTasks.forEach((task) => task());
       }
-    }
-  
-    /** 返回一个成功的MyPromise */
-    /** 过滤thenable
-     * 1. 如果是MyPrimise类型，判读是否是当前myPromise，防止形成环,是则报错，否则直接返回
-     * 2. duck检测，检查是不是thenable，是则封装成MyPromise 否则直接封装到成功的MyPromise
-     */
-    public static resolve(value?: any) {
-      /** duck检测 */
-      if (MyPromise._duckTest(value)) {
-        return new MyPromise((resolve, reject) => {
-          MyPromise._handleThenable(value, resolve, reject);
-        });
-      }
-  
-      /** 都不是 按照普通类型处理 */
-      return new MyPromise((resolve) => {
-        resolve(value);
-      });
-    }
-  
-    /** 返回一个失败的MyPromise */
-    public static reject(reason?: any) {
-      return new MyPromise((_, reject) => {
-        reject(reason);
-      });
-    }
-  
-    public static all(myPromises: IMyPromise[]) {
-      const resultList: any[] = [];
-      let fulfilledCnt = 0;
-      return new MyPromise((resolve, reject) => {
-        for (let i = 0; i < myPromises.length; i++) {
-          const myPrimise = myPromises[i];
-          myPrimise.then(
-            (value) => {
-              resultList[i] = value;
-              if (++fulfilledCnt === myPromises.length) {
-                resolve(resultList);
-              }
-            },
-            () => {
-              reject();
-            },
-          );
-        }
-      });
-    }
-  
-    public static any(myPromises: IMyPromise[]) {
-      const AggregateError: any[] = [];
-      let rejectedCnt = 0;
-  
-      return new MyPromise((resolve, reject) => {
-        for (let i = 0; i < myPromises.length; i++) {
-          const myPrimise = myPromises[i];
-          myPrimise.then(
-            (val) => {
-              resolve(val);
-            },
-            (reason) => {
-              AggregateError[i] = reason;
-              if (++rejectedCnt === myPromises.length) {
-                reject(AggregateError);
-              }
-            },
-          );
-        }
-      });
-    }
-  
-    public static race(myPromises: IMyPromise[]) {
-      return new MyPromise((resolve, reject) => {
-        myPromises.forEach((myPromise) => {
-          myPromise.then(resolve, reject);
-        });
-      });
-    }
-  
-    public static allSettled(myPromises: IMyPromise[]) {
-      const resultList: any[] = [];
-      let decideCnt = 0;
-      return new MyPromise((resolve) => {
-        for (let i = 0; i < myPromises.length; i++) {
-          const myPrimise = myPromises[i];
-          myPrimise.then(
-            (val) => {
-              resultList[i] = {
-                status: EMyPromiseState.FULFILLED,
-                value: val,
-              };
-              if (++decideCnt === myPromises.length) {
-                resolve(resultList);
-              }
-            },
-            (reason) => {
-              resultList[i] = {
-                status: EMyPromiseState.REJECTED,
-                value: reason,
-              };
-              if (++decideCnt === myPromises.length) {
-                resolve(resultList);
-              }
-            },
-          );
-        }
-      });
     }
   }
-  
-  /** 导出MyPromise */
-  export default MyPromise;
-  
+
+  /** 用来拒拒当前Promise */
+  private _rejectPromise(reason: any) {
+    /** 只有在Promise没有决策的情况下才能调用 */
+    if (!this._isPromiseDecided()) {
+      // 修改状态
+      this.state = MyPromiseState.REJECTED;
+      // 设置值
+      this.value = reason;
+      // 检查 onRejectedTasks 是否有注册的then任务，如果有就执行
+      this.onRejectedTasks.forEach((task) => task());
+    }
+  }
+
+  /** duck检测，兼容thenable */
+  private static _isThenable(thenable: any) {
+    if (typeof thenable === "object" || typeof thenable === "function") {
+      if (typeof thenable?.then === "function") {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**  处理thenable */
+  private static _handleThenable(
+    thenable: Thenable,
+    onFulfilled: OnFulfilled,
+    onRejected: OnRejected
+  ) {
+    if (this._isThenable(thenable)) {
+      thenable.then(
+        (value) => {
+          this._handleThenable(value, onFulfilled, onRejected);
+        },
+        (reason) => {
+          onRejected(reason);
+        }
+      );
+    } else {
+      onFulfilled(thenable);
+    }
+  }
+
+  /** then方法
+   *  1. 根据Promise的状态，决定调用哪个回调
+   *  2. 根据回调的返回结果，确定then函数的返回结果
+   */
+  public then(
+    onFulfilled: OnFulfilled = (value) => value,
+    onRejected: OnRejected = (reason) => {
+      // 把异常抛出去 方便后面catch接收
+      throw reason;
+    }
+  ): MyPromise {
+    // then返回的一定是个Promise
+    return new MyPromise((resolve, reject) => {
+      /** 在微任务中执行then任务 */
+      const _runThenTask = () => {
+        pushToMicroTask(() => {
+          try {
+            let callbackResult: any;
+            /** 根据state 执行对应的回调 */
+            if (this.state === MyPromiseState.FULFILLED) {
+              callbackResult = onFulfilled(this.value);
+            } else if (this.state === MyPromiseState.REJECTED) {
+              callbackResult = onRejected(this.value);
+            } else {
+              return;
+            }
+
+            /** 需要判断，返回结果不能是当前Promise本身，否则会出现死循环 */
+            if (callbackResult === this) {
+              throw new Error("then方法不能返回本身的MyPromise");
+            }
+
+            if (MyPromise._isThenable(callbackResult)) {
+              // 鸭子检测 查看是不是thenable
+              MyPromise._handleThenable(callbackResult, resolve, reject);
+            } else if (callbackResult instanceof MyPromise) {
+              callbackResult.then(resolve, reject);
+            } else {
+              // 直接resolve
+              resolve(callbackResult);
+            }
+          } catch (e) {
+            reject(e);
+          }
+        });
+      };
+      // 把resolve和reject函数交付
+      if (this._isPromiseDecided()) {
+        // 已经决策了，直接执行任务
+        _runThenTask();
+      } else {
+        // 还没决策，把任务放到任务队列中
+        this.onFulfilledTasks.push(_runThenTask.bind(this));
+        this.onRejectedTasks.push(_runThenTask.bind(this));
+      }
+    });
+  }
+
+  /** catch 就是相当于代理了then*/
+  public catch(catchHandler: (error: any) => any) {
+    this.then((value) => value, catchHandler);
+  }
+
+  /** finally 透传递 */
+  public finally(finallyHandler: () => any) {
+    this.then(finallyHandler, finallyHandler);
+  }
+
+  /** resolve方法 返回一个成功的Resolve 或者根据thenable转换 */
+  public static resolve(thenable: any) {
+    return new MyPromise((resolve, reject) => {
+      this._handleThenable(thenable, resolve, reject);
+    });
+  }
+
+  /** 返回一个失败的promise */
+  public static reject(reason: any) {
+    return new MyPromise((resolve, reject) => {
+      reject(reason);
+    });
+  }
+
+  /** all 所有都成功 返回valueList */
+  public static all(promises: MyPromise[]) {
+    const valueList: any[] = [];
+    let successCnt = 0;
+    return new MyPromise((resolve, rehject) => {
+      for (let i = 0; i < promises.length; i++) {
+        const currengPromise = promises[i];
+        currengPromise.then(
+          (value) => {
+            valueList[i] = value;
+            if (++successCnt === promises.length) {
+              resolve(valueList);
+            }
+          },
+          (reason) => {
+            this.reject(reason);
+          }
+        );
+      }
+    });
+  }
+
+  /** 所有都决定了 注意返回值 {status,value} */
+  public static allSettled(promises: MyPromise[]) {
+    const allSettledReturns: AllSettledReturns[] = [];
+    for (let i = 0; i < promises.length; i++) {
+      const currentPromise = promises[i];
+      currentPromise.then(
+        (value) => {
+          allSettledReturns[i] = {
+            status: MyPromiseState.FULFILLED,
+            value,
+          };
+        },
+        (reason) => {
+          allSettledReturns[i] = {
+            status: MyPromiseState.REJECTED,
+            value: reason,
+          };
+        }
+      );
+    }
+  }
+
+  /** rece 返回第一个 */
+  public static race(promises: MyPromise[]) {
+    return new MyPromise((resolve, reject) => {
+      for (const promise of promises) {
+        promise.then(resolve, reject);
+      }
+    });
+  }
+
+  /** any 有一个成功 */
+  public static any(promises: MyPromise[]) {
+    let rejectedCnt = 0;
+    return new MyPromise((resolve, reject) => {
+      for (const promise of promises) {
+        promise.then(
+          (value) => {
+            resolve(value);
+          },
+          (reason) => {
+            if (++rejectedCnt === promises.length) {
+              reject(new AggregateError("All promises were rejected"));
+            }
+          }
+        );
+      }
+    });
+  }
+}

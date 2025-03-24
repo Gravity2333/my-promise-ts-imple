@@ -1,7 +1,7 @@
 const path = require("path");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 module.exports = {
-  mode: "production",
+  mode: "none",
   entry: "./src/index.ts", // 项目的入口文件
   output: {
     filename: "bundle.js", // 编译后的文件名
