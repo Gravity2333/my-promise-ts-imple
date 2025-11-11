@@ -233,23 +233,32 @@ export default class MyPromise {
   /** 所有都决定了 注意返回值 {status,value} */
   public static allSettled(promises: MyPromise[]) {
     const allSettledReturns: AllSettledReturns[] = [];
-    for (let i = 0; i < promises.length; i++) {
-      const currentPromise = promises[i];
-      currentPromise.then(
-        (value) => {
-          allSettledReturns[i] = {
-            status: MyPromiseState.FULFILLED,
-            value,
-          };
-        },
-        (reason) => {
-          allSettledReturns[i] = {
-            status: MyPromiseState.REJECTED,
-            value: reason,
-          };
-        }
-      );
-    }
+    let settedCnt = 0;
+    return new Promise((resolve) => {
+      for (let i = 0; i < promises.length; i++) {
+        const currentPromise = promises[i];
+        currentPromise.then(
+          (value) => {
+            allSettledReturns[i] = {
+              status: MyPromiseState.FULFILLED,
+              value,
+            };
+            if (++settedCnt === promises.length) {
+              resolve(allSettledReturns);
+            }
+          },
+          (reason) => {
+            allSettledReturns[i] = {
+              status: MyPromiseState.REJECTED,
+              value: reason,
+            };
+            if (++settedCnt === promises.length) {
+              resolve(allSettledReturns);
+            }
+          }
+        );
+      }
+    });
   }
 
   /** rece 返回第一个 */
